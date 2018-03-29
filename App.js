@@ -6,36 +6,102 @@
 
 import React, { Component } from 'react';
 import {
+  Button,
   Platform,
   StyleSheet,
   Text,
   View
 } from 'react-native';
 
-const instructions = Platform.select({
-  ios: 'Press Cmd+R to reload,\n' +
-    'Cmd+D or shake for dev menu',
-  android: 'Double tap R on your keyboard to reload,\n' +
-    'Shake or press menu button for dev menu',
-});
+import ReactNativeFbsdk from 'react-native-fbsdk'
 
-type Props = {};
-export default class App extends Component<Props> {
+
+
+type Props = {}
+
+type State = {
+  fbResponse: ?Object,
+  fbError: ?Object
+}
+
+export default class App extends Component<Props, State> {
+
+
+  state = {}
+
+
   render() {
     return (
       <View style={styles.container}>
         <Text style={styles.welcome}>
           Welcome to React Native!
         </Text>
-        <Text style={styles.instructions}>
-          To get started, edit App.js
+        <Button
+          style={styles.button}
+          onPress={this.login}
+          title='Login with Facebook'
+          />
+        <Text style={styles.result}>
+          Result: {JSON.stringify(this.state.fbResponse)}
         </Text>
-        <Text style={styles.instructions}>
-          {instructions}
+        <Text style={styles.result}>
+          Error: {JSON.stringify(this.state.fbError)}
         </Text>
       </View>
-    );
+    )
   }
+
+
+  login() {
+    loginWithFacebook()
+      .then((result) => {
+        this.setState({ fbResponse: result })
+      })
+      .catch((err) => {
+        this.setState({ fbError: err })
+      })
+  }
+
+
+}
+
+const loginWithFacebook = () => {
+
+  const permissions = ['email', 'user_birthday']
+
+  // ReactNativeFbsdk.LoginManager.setLoginBehavior('WEB_ONLY')
+  return ReactNativeFbsdk.LoginManager.logInWithReadPermissions(permissions)
+    .then((resp) => {
+
+      if (
+        resp.isCancelled
+        ||
+        _.get(resp.declinedPermissions, 'length')
+      ) {
+        throw new Error('User cancelled login')
+      }
+
+      console.log('Logged in with Facebook %o', resp)
+
+      return ReactNativeFbsdk.AccessToken.getCurrentAccessToken()
+        .then((data) => {
+
+          console.log('Received Facebook access data %o', data)
+
+          return {
+            authResponse: {
+              expiresIn   : data.expirationTime - Date.now(),
+              accessToken : data.accessToken,
+            }
+          }
+
+        })
+
+    })
+    .catch((err) => {
+      console.error('Unable to login with Facebook: %o', err)
+    })
+
 }
 
 const styles = StyleSheet.create({
@@ -48,11 +114,16 @@ const styles = StyleSheet.create({
   welcome: {
     fontSize: 20,
     textAlign: 'center',
-    margin: 10,
+    margin: 20,
   },
-  instructions: {
+  button: {
     textAlign: 'center',
     color: '#333333',
-    marginBottom: 5,
+    marginBottom: 20,
+  },
+  result: {
+    textAlign: 'center',
+    color: '#333333',
+    marginBottom: 10,
   },
 });
